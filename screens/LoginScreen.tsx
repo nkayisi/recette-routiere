@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { Text, TextInput, TouchableOpacity, View, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView } from "react-native";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -34,10 +34,17 @@ export default function LoginScreen() {
       className="flex-1 bg-white"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <StatusBar style="dark" />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView 
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <StatusBar style="dark" />
 
-      {/* Header avec design moderne */}
-      <View className="flex-col items-center justify-center px-6 pt-[120px] pb-14">
+          {/* Header avec design moderne */}
+          <View className="flex-col items-center justify-center px-6 pt-[120px] pb-14">
         {/* Logo moderne */}
         <View className="w-16 h-16 bg-black rounded-2xl justify-center items-center mb-8 shadow-lg">
           <Ionicons name="shield-checkmark" size={32} color="#fff" />
@@ -55,23 +62,23 @@ export default function LoginScreen() {
       <View className="flex-1 px-6">
         {/* Phone Input Card */}
         <View className="mb-8">
-          <Text className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
+          <Text className="text-sm text-gray-900 mb-3 uppercase tracking-wide">
             Numéro de téléphone
           </Text>
           <View 
-            className={`flex-row items-center bg-zinc-50 rounded-2xl px-5 border-2 ${
-              isFocused ? "border-black bg-white" : "border-transparent"
+            className={`flex-row items-center bg-zinc-50 rounded-2xl px-5 border-[0.5px] ${
+              isFocused && "bg-white"
             }`}
           >
-            <View className="flex-row items-center mr-3 py-5">
-              <View className="w-8 h-8 bg-black rounded-lg justify-center items-center mr-2">
-                <Ionicons name="call" size={16} color="#fff" />
+            <View className="flex-row items-center mr-3 py-4">
+              <View className="w-6 h-6 rounded-lg justify-center items-center mr-2">
+                <Ionicons name="call-outline" size={16} color="#000" />
               </View>
-              <Text className="text-lg font-bold text-black">+243</Text>
+              <Text className="text-lg text-black">+243</Text>
             </View>
             <View className="h-10 w-[1px] bg-gray-300 mr-3" />
             <TextInput
-              className="flex-1 text-lg font-semibold text-black"
+              className="flex-1 items-center text-lg font-semibold text-black"
               placeholder="812 345 678"
               placeholderTextColor="#999"
               keyboardType="phone-pad"
@@ -136,15 +143,17 @@ export default function LoginScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Footer moderne */}
-      <View className="px-6 pb-10">
-        <View className="flex-row justify-center items-center gap-1">
-          <Ionicons name="shield-checkmark-outline" size={16} color="#999" />
-          <Text className="text-center text-xs text-gray-400">
-            Connexion sécurisée et confidentielle
-          </Text>
-        </View>
-      </View>
+          {/* Footer moderne */}
+          <View className="px-6 pb-10">
+            <View className="flex-row justify-center items-center gap-1">
+              <Ionicons name="shield-checkmark-outline" size={16} color="#999" />
+              <Text className="text-center text-xs text-gray-400">
+                Connexion sécurisée et confidentielle
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }

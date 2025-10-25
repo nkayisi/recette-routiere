@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform } from "react-native";
 import { useState } from "react";
 
 interface Props {
@@ -55,8 +55,15 @@ export default function NouvellePerceptionSheet({ visible, onClose }: Props) {
       onRequestClose={handleClose}
     >
       <View className="flex-1 justify-end bg-black/50">
-        <View className="bg-white rounded-t-[24px] h-[85%]">
-          <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView 
+          className="bg-white rounded-t-[24px] h-[85%]"
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView 
+            className="flex-1 px-5 pt-6" 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Header */}
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-2xl font-bold text-black">Nouvelle Perception</Text>
@@ -250,7 +257,7 @@ export default function NouvellePerceptionSheet({ visible, onClose }: Props) {
               </View>
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

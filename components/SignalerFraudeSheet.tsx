@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform } from "react-native";
 
 interface Props {
   visible: boolean;
@@ -25,8 +25,15 @@ export default function SignalerFraudeSheet({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
       <View className="flex-1 justify-end bg-black/50">
-        <View className="bg-white rounded-t-[24px] h-[90%]">
-          <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView 
+          className="bg-white rounded-t-[24px] h-[90%]"
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView 
+            className="flex-1 px-5 pt-6" 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-2xl font-bold text-black">Signaler une Fraude</Text>
               <TouchableOpacity onPress={handleClose} className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center">
@@ -96,7 +103,7 @@ export default function SignalerFraudeSheet({ visible, onClose }: Props) {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
