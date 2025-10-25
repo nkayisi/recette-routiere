@@ -37,16 +37,16 @@ export default function LoginScreen() {
       <StatusBar style="dark" />
 
       {/* Header avec design moderne */}
-      <View className="px-6 pt-[120px] pb-10">
+      <View className="flex-col items-center justify-center px-6 pt-[120px] pb-14">
         {/* Logo moderne */}
         <View className="w-16 h-16 bg-black rounded-2xl justify-center items-center mb-8 shadow-lg">
           <Ionicons name="shield-checkmark" size={32} color="#fff" />
         </View>
         
-        <Text className="text-5xl font-bold text-black mb-3 leading-tight">
+        <Text className="text-5xl font-bold text-black text-center mb-3 leading-tight">
           Bienvenue
         </Text>
-        <Text className="text-lg text-gray-500 leading-relaxed">
+        <Text className="text-lg text-gray-500 text-center leading-relaxed">
           Connectez-vous pour accéder à{"\n"}votre espace agent
         </Text>
       </View>
