@@ -8,6 +8,8 @@ import ScannerRecuSheet from "@/components/ScannerRecuSheet";
 import HistoriqueSheet from "@/components/HistoriqueSheet";
 import SignalerFraudeSheet from "@/components/SignalerFraudeSheet";
 import SearchModal from "@/components/SearchModal";
+import NotificationsModal from "@/components/NotificationsModal";
+import HelpModal from "@/components/HelpModal";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -16,7 +18,10 @@ export default function HomeScreen() {
   const [historiqueVisible, setHistoriqueVisible] = useState(false);
   const [signalerFraudeVisible, setSignalerFraudeVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
+  const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [notificationCount, setNotificationCount] = useState(2); // Nombre de notifications non lues
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View className="flex flex-col flex-1 bg-[#f5f5f5]">
@@ -25,13 +30,26 @@ export default function HomeScreen() {
         {/* Header */}
         <View className="flex-row justify-between items-center px-5 pt-[60px] pb-5 bg-[#f5f5f5]">
         <View className="flex-row items-center">
-          <TouchableOpacity className="w-11 h-11 rounded-full bg-white justify-center items-center shadow-sm">
+          <TouchableOpacity 
+            className="w-11 h-11 rounded-full bg-white justify-center items-center shadow-sm"
+            onPress={() => setHelpModalVisible(true)}
+          >
             <Ionicons name="help-circle-outline" size={28} color="#000" />
           </TouchableOpacity>
         </View>
         <View className="flex-row items-center gap-3">
-          <TouchableOpacity className="w-10 h-10 rounded-full bg-notification-red justify-center items-center">
+          <TouchableOpacity 
+            className="w-10 h-10 rounded-full bg-notification-red justify-center items-center relative"
+            onPress={() => setNotificationsModalVisible(true)}
+          >
             <Ionicons name="notifications-outline" size={24} color="#fff" />
+            {notificationCount > 0 && (
+              <View className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white justify-center items-center border-2 border-notification-red">
+                <Text className="text-[10px] font-bold text-notification-red">
+                  {notificationCount > 9 ? "9+" : notificationCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -40,7 +58,7 @@ export default function HomeScreen() {
         {/* Welcome Message */}
         <View className="mt-5">
           <Text className="text-[40px] font-bold text-black ios:leading-[47px] android:leading-[50px]">
-            Bonjour,{"\n"}
+            Salut à vous,{"\n"}
             <Text className="text-[40px] font-bold text-black ios:leading-[47px] android:leading-[50px]">
               Quelle opération{"\n"}souhaitez-vous effectuer ?
             </Text>
@@ -135,6 +153,14 @@ export default function HomeScreen() {
         </View>
 
         {/* Modals */}
+        <HelpModal 
+          visible={helpModalVisible} 
+          onClose={() => setHelpModalVisible(false)}
+        />
+        <NotificationsModal 
+          visible={notificationsModalVisible} 
+          onClose={() => setNotificationsModalVisible(false)}
+        />
         <SearchModal 
           visible={searchModalVisible} 
           onClose={() => setSearchModalVisible(false)}
