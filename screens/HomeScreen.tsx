@@ -10,6 +10,7 @@ import SignalerFraudeSheet from "@/components/SignalerFraudeSheet";
 import SearchModal from "@/components/SearchModal";
 import NotificationsModal from "@/components/NotificationsModal";
 import HelpModal from "@/components/HelpModal";
+import { House } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -133,7 +134,8 @@ export default function HomeScreen() {
           <TouchableOpacity 
           className="w-[45px] h-[45px] rounded-full bg-white justify-center items-center shadow-2xl"
           >
-            <Ionicons name="layers-outline" size={26} color="#000" />
+            {/* <Ionicons name="house" size={26} color="#000" /> */}
+            <House color="#000" size={26} />
           </TouchableOpacity>
           <TouchableOpacity 
             className="w-[45px] h-[45px] rounded-full bg-[#4a4a4a] justify-center items-center shadow-2xl"
