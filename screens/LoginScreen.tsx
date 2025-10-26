@@ -3,31 +3,55 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView } from "react-native";
+import { useAuth } from "@/lib/auth/useAuth";
 
 export default function LoginScreen() {
   const router = useRouter();
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleSendOTP = async () => {
+  const { signIn, session, error } = useAuth();
+
+  const handleLogin = async () => {
     if (!phoneNumber || phoneNumber.length < 9) {
       Alert.alert("Erreur", "Veuillez entrer un numéro de téléphone valide");
       return;
     }
 
+    if (!password || password.length < 6) {
+      Alert.alert("Erreur", "Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
     setLoading(true);
     
-    // Simuler l'envoi d'OTP (à remplacer par une vraie API)
-    setTimeout(() => {
+    try {
+      // Format: +243 + numéro (9 chiffres)
+      const fullPhoneNumber = `+243${phoneNumber}`;
+      
+      await signIn(fullPhoneNumber, password);
+      
+      Alert.alert("Succès", "Connexion réussie !", [
+        {
+          text: "OK",
+          onPress: () => router.replace("/home"),
+        },
+      ]);
+    } catch (err: any) {
+      Alert.alert(
+        "Erreur de connexion",
+        err.message || "Identifiants incorrects ou serveur indisponible"
+      );
+    } finally {
       setLoading(false);
-      // Rediriger vers la page de vérification OTP
-      router.push({
-        pathname: "/verify-otp",
-        params: { phoneNumber }
-      });
-    }, 1500);
+    }
   };
+
+  console.log("session ======= : ", session);
 
   return (
     <KeyboardAvoidingView 
@@ -61,13 +85,13 @@ export default function LoginScreen() {
       {/* Form avec design moderne */}
       <View className="flex-1 px-6">
         {/* Phone Input Card */}
-        <View className="mb-8">
+        <View className="mb-6">
           <Text className="text-sm text-gray-900 mb-3 uppercase tracking-wide">
             Numéro de téléphone
           </Text>
           <View 
             className={`flex-row items-center bg-zinc-50 rounded-2xl px-5 border-[0.5px] ${
-              isFocused && "bg-white"
+              isFocused ? "bg-white border-black" : "border-gray-200"
             }`}
           >
             <View className="flex-row items-center mr-3 py-4">
@@ -94,17 +118,53 @@ export default function LoginScreen() {
           </Text>
         </View>
 
+        {/* Password Input Card */}
+        <View className="mb-8">
+          <Text className="text-sm text-gray-900 mb-3 uppercase tracking-wide">
+            Mot de passe
+          </Text>
+          <View 
+            className={`flex-row items-center bg-zinc-50 rounded-2xl px-5 border-[0.5px] ${
+              passwordFocused ? "bg-white border-black" : "border-gray-200"
+            }`}
+          >
+            <View className="w-6 h-6 rounded-lg justify-center items-center mr-3 py-4">
+              <Ionicons name="lock-closed-outline" size={16} color="#000" />
+            </View>
+            <TextInput
+              className="flex-1 items-center text-lg font-semibold text-black py-4"
+              placeholder="••••••••"
+              placeholderTextColor="#999"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              className="ml-2 py-4"
+            >
+              <Ionicons 
+                name={showPassword ? "eye-outline" : "eye-off-outline"} 
+                size={20} 
+                color="#666" 
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Info moderne */}
         <View className="bg-zinc-100 rounded-2xl p-5 mb-8 flex-row items-start gap-4">
           <View className="w-10 h-10 bg-black rounded-full justify-center items-center mt-1">
-            <Ionicons name="lock-closed" size={18} color="#fff" />
+            <Ionicons name="shield-checkmark" size={18} color="#fff" />
           </View>
           <View className="flex-1">
             <Text className="text-sm font-bold text-black mb-1">
               Connexion sécurisée
             </Text>
             <Text className="text-sm text-gray-600 leading-relaxed">
-              Un code de vérification à 4 chiffres sera envoyé par SMS
+              Vos données sont protégées et chiffrées
             </Text>
           </View>
         </View>
@@ -112,12 +172,12 @@ export default function LoginScreen() {
         {/* Button moderne */}
         <TouchableOpacity
           className={`rounded-2xl py-5 shadow-lg ${
-            loading || phoneNumber.length < 9 
+            loading || phoneNumber.length < 9 || password.length < 6
               ? "bg-gray-300" 
               : "bg-black"
           }`}
-          onPress={handleSendOTP}
-          disabled={loading || phoneNumber.length < 9}
+          onPress={handleLogin}
+          disabled={loading || phoneNumber.length < 9 || password.length < 6}
           style={{
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 4 },
@@ -129,12 +189,12 @@ export default function LoginScreen() {
           <View className="flex-row justify-center items-center gap-2">
             {loading ? (
               <Text className="text-white text-center font-bold text-lg">
-                Envoi en cours...
+                Connexion en cours...
               </Text>
             ) : (
               <>
                 <Text className="text-white text-center font-bold text-lg">
-                  Continuer
+                  Se connecter
                 </Text>
                 <Ionicons name="arrow-forward" size={20} color="#fff" />
               </>

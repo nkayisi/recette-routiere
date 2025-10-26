@@ -1,50 +1,194 @@
-# Welcome to your Expo app 👋
+# # Recette Routière - Application Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Application mobile de gestion des perceptions routières pour la RDC.
 
-## Get started
+## 🚀 Démarrage rapide
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### Installation
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Lancer l'application
 
-## Learn more
+```bash
+npx expo start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## 🔐 Système d'authentification
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+L'application utilise un système d'authentification personnalisé avec **Django SimpleJWT** pour le backend.
 
-## Join the community
+### Architecture
 
-Join our community of developers creating universal apps.
+- **Backend** : Django REST Framework + SimpleJWT
+- **Frontend** : React Native + Expo
+- **Storage** : expo-secure-store (stockage sécurisé des tokens)
+- **HTTP Client** : Axios avec intercepteurs automatiques
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Fichiers principaux
+
+```
+lib/auth/
+├── auth-client.ts      # Service d'authentification + API Axios
+├── useAuth.ts          # Hook React pour gérer l'état d'auth
+components/
+├── ProtectedRoute.tsx  # Composant pour protéger les routes
+```
+
+### Utilisation
+
+#### 1. Connexion
+
+```typescript
+import { useAuth } from "@/lib/auth/useAuth";
+
+function LoginScreen() {
+  const { signIn, loading, error } = useAuth();
+
+  const handleLogin = async () => {
+    try {
+      await signIn("+243812345678", "password123");
+      // Rediriger vers la page d'accueil
+    } catch (err) {
+      console.error(err.message);
+    }
+  };
+}
+```
+
+#### 2. Accéder à la session
+
+```typescript
+import { useAuth } from "@/lib/auth/useAuth";
+
+function ProfileScreen() {
+  const { user, isAuthenticated, loading } = useAuth();
+
+  if (loading) return <ActivityIndicator />;
+  if (!isAuthenticated) return <Text>Non connecté</Text>;
+
+  return <Text>Bonjour {user?.username}</Text>;
+}
+```
+
+#### 3. Déconnexion
+
+```typescript
+import { useAuth } from "@/lib/auth/useAuth";
+
+function ProfileScreen() {
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    // Rediriger vers la page de connexion
+  };
+}
+```
+
+#### 4. Protéger une route
+
+```typescript
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+
+export default function HomeScreen() {
+  return (
+    <ProtectedRoute>
+      <View>
+        {/* Contenu protégé */}
+      </View>
+    </ProtectedRoute>
+  );
+}
+```
+
+#### 5. Faire des requêtes authentifiées
+
+```typescript
+import { api } from "@/lib/auth/auth-client";
+
+// Le token est automatiquement ajouté aux headers
+const response = await api.get("/perceptions/");
+const perceptions = response.data;
+```
+
+### Configuration Backend Django
+
+Votre backend Django doit exposer ces endpoints :
+
+```
+POST /api/auth/login/
+Body: { "login": "+243812345678", "password": "password123" }
+Response: { "access": "...", "refresh": "...", "user": {...} }
+
+POST /api/auth/refresh/
+Body: { "refresh": "..." }
+Response: { "access": "..." }
+
+POST /api/auth/logout/
+Body: { "refresh": "..." }
+Response: { "message": "Logged out successfully" }
+```
+
+### Fonctionnalités
+
+✅ **Refresh automatique des tokens** : Les tokens expirés sont automatiquement rafraîchis  
+✅ **Stockage sécurisé** : Utilise expo-secure-store pour chiffrer les tokens  
+✅ **Intercepteurs Axios** : Ajoute automatiquement le token à chaque requête  
+✅ **Gestion d'erreurs** : Déconnexion automatique si le refresh échoue  
+✅ **TypeScript** : Types complets pour une meilleure DX  
+
+### Configuration
+
+Modifiez l'URL du backend dans `/lib/auth/auth-client.ts` :
+
+```typescript
+const BACKEND_URL = "http://192.168.1.14:8000/api"; // Votre URL
+```
+
+## 📱 Structure de l'application
+
+```
+app/
+├── index.tsx           # Splash screen
+├── login.tsx           # Écran de connexion
+├── home.tsx            # Page d'accueil (protégée)
+├── profile.tsx         # Profil utilisateur
+screens/
+├── LoginScreen.tsx     # Composant de connexion
+├── HomeScreen.tsx      # Composant d'accueil
+components/
+├── ProtectedRoute.tsx  # Protection des routes
+lib/auth/
+├── auth-client.ts      # Service d'authentification
+├── useAuth.ts          # Hook React
+```
+
+## 🛠️ Technologies
+
+- **React Native** 0.81.5
+- **Expo** ~54.0.20
+- **TypeScript** ~5.9.2
+- **NativeWind** 4.2.1 (TailwindCSS)
+- **Axios** 1.12.2
+- **Expo Router** ~6.0.13
+- **Expo Secure Store** ^15.0.7
+
+## 📝 Notes importantes
+
+1. **Sécurité** : Les tokens sont stockés dans expo-secure-store (chiffrement matériel)
+2. **Refresh automatique** : Les tokens sont rafraîchis automatiquement avant expiration
+3. **Gestion d'erreurs** : Toutes les erreurs réseau sont gérées avec des messages clairs
+4. **TypeScript** : Types complets pour éviter les erreurs
+
+## 🤝 Contribution
+
+Pour contribuer au projet, suivez ces étapes :
+
+1. Fork le projet
+2. Créez une branche (`git checkout -b feature/AmazingFeature`)
+3. Commit vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrez une Pull Request
