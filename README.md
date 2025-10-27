@@ -31,11 +31,15 @@ L'application utilise un système d'authentification personnalisé avec **Django
 
 ```
 lib/auth/
-├── auth-client.ts      # Service d'authentification + API Axios
-├── useAuth.ts          # Hook React pour gérer l'état d'auth
+├── auth-client.ts       # Service d'authentification + API Axios
+├── useAuth.ts           # Hook React pour gérer l'état d'auth
+├── AuthContext.tsx      # Context Provider global (optionnel)
+├── USAGE_EXAMPLES.md    # Guide complet d'utilisation
 components/
-├── ProtectedRoute.tsx  # Composant pour protéger les routes
+├── ProtectedRoute.tsx   # Composant pour protéger les routes
 ```
+
+📖 **[Voir le guide complet d'utilisation](./lib/auth/USAGE_EXAMPLES.md)**
 
 ### Utilisation
 

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView } from "react-native";
 import { useAuth } from "@/lib/auth/useAuth";
 
@@ -14,7 +14,14 @@ export default function LoginScreen() {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { signIn, session, error } = useAuth();
+  const { signIn, session, loading: authLoading } = useAuth();
+
+  // Rediriger vers /home si déjà connecté
+  useEffect(() => {
+    if (!authLoading && session.isAuthenticated) {
+      router.replace("/home");
+    }
+  }, [authLoading, session.isAuthenticated]);
 
   const handleLogin = async () => {
     if (!phoneNumber || phoneNumber.length < 9) {
@@ -35,12 +42,8 @@ export default function LoginScreen() {
       
       await signIn(fullPhoneNumber, password);
       
-      Alert.alert("Succès", "Connexion réussie !", [
-        {
-          text: "OK",
-          onPress: () => router.replace("/home"),
-        },
-      ]);
+      // Redirection automatique après connexion réussie
+      router.replace("/home");
     } catch (err: any) {
       Alert.alert(
         "Erreur de connexion",
@@ -50,8 +53,6 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
-
-  console.log("session ======= : ", session);
 
   return (
     <KeyboardAvoidingView 
@@ -68,7 +69,7 @@ export default function LoginScreen() {
           <StatusBar style="dark" />
 
           {/* Header avec design moderne */}
-          <View className="flex-col items-center justify-center px-6 pt-[120px] pb-14">
+          <View className="flex-col items-center justify-center px-6 pt-24 pb-14">
         {/* Logo moderne */}
         <View className="w-16 h-16 bg-black rounded-2xl justify-center items-center mb-8 shadow-lg">
           <Ionicons name="shield-checkmark" size={32} color="#fff" />

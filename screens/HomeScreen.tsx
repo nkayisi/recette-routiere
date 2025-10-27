@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { Text, TextInput, TouchableOpacity, View, TouchableWithoutFeedback, Keyboard } from "react-native";
-import { useState } from "react";
+import { Text, TextInput, TouchableOpacity, View, TouchableWithoutFeedback, Keyboard, ActivityIndicator } from "react-native";
+import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import NouvellePerceptionSheet from "@/components/NouvellePerceptionSheet";
 import ScannerRecuSheet from "@/components/ScannerRecuSheet";
@@ -11,9 +11,13 @@ import SearchModal from "@/components/SearchModal";
 import NotificationsModal from "@/components/NotificationsModal";
 import HelpModal from "@/components/HelpModal";
 import { House } from 'lucide-react-native';
+import { useAuth } from "@/lib/auth/useAuth";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { session, loading } = useAuth();
+  
+  // Tous les useState doivent être appelés AVANT tout retour conditionnel
   const [nouvellePerceptionVisible, setNouvellePerceptionVisible] = useState(false);
   const [scannerRecuVisible, setScannerRecuVisible] = useState(false);
   const [historiqueVisible, setHistoriqueVisible] = useState(false);
@@ -23,6 +27,27 @@ export default function HomeScreen() {
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [notificationCount, setNotificationCount] = useState(2); // Nombre de notifications non lues
+
+  // Rediriger vers /login si non connecté
+  useEffect(() => {
+    if (!loading && !session.isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [loading, session.isAuthenticated]);
+
+  // Afficher un loader pendant la vérification
+  if (loading) {
+    return (
+      <View className="flex-1 bg-[#f5f5f5] justify-center items-center">
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+  // Ne rien afficher si non authentifié (redirection en cours)
+  if (!session.isAuthenticated) {
+    return null;
+  }
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View className="flex flex-col flex-1 bg-[#f5f5f5]">

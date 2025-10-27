@@ -1,5 +1,13 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import { getBackendURL, STORAGE_KEYS as IMPORTED_STORAGE_KEYS, AUTH_ENDPOINTS, TIMEOUTS } from "./config";
+
+// Fallback pour STORAGE_KEYS au cas où l'import échoue
+const STORAGE_KEYS = IMPORTED_STORAGE_KEYS || {
+  ACCESS_TOKEN: "auth_access_token",
+  REFRESH_TOKEN: "auth_refresh_token",
+  USER: "auth_user",
+};
 
 // ==================== TYPES ====================
 export interface DjangoUser {
@@ -24,73 +32,69 @@ export interface AuthSession {
   isAuthenticated: boolean;
 }
 
-// ==================== CONFIGURATION ====================
-const BACKEND_URL = "http://127.0.0.1:8000/api";
-const STORAGE_KEYS = {
-  ACCESS_TOKEN: "@auth/access_token",
-  REFRESH_TOKEN: "@auth/refresh_token",
-  USER: "@auth/user",
-};
-
 // ==================== AXIOS INSTANCE ====================
 export const api = axios.create({
-  baseURL: BACKEND_URL,
+  baseURL: getBackendURL(),
+  timeout: TIMEOUTS.REQUEST,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 // Intercepteur pour ajouter le token à chaque requête
-// TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG
-// api.interceptors.request.use(
-//   async (config) => {
-//     const token = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-//     if (token) {
-//       config.headers.Authorization = `Bearer ${token}`;
-//     }
-//     return config;
-//   },
-//   (error) => Promise.reject(error)
-// );
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error("Error reading token from SecureStore:", error);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// // Intercepteur pour gérer le refresh token automatiquement
-// api.interceptors.response.use(
-//   (response) => response,
-//   async (error) => {
-//     const originalRequest = error.config;
+// Intercepteur pour gérer le refresh token automatiquement
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
 
-//     // Si erreur 401 et pas déjà tenté de refresh
-//     if (error.response?.status === 401 && !originalRequest._retry) {
-//       originalRequest._retry = true;
+    // Si erreur 401 et pas déjà tenté de refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
 
-//       try {
-//         const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+      try {
+        const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
         
-//         if (!refreshToken) {
-//           throw new Error("No refresh token");
-//         }
+        if (!refreshToken) {
+          throw new Error("No refresh token");
+        }
 
-//         // Appeler l'endpoint de refresh
-//         const response = await axios.post(`${BACKEND_URL}/auth/refresh/`, {
-//           refresh: refreshToken,
-//         });
+        // Appeler l'endpoint de refresh
+        const response = await axios.post(`${getBackendURL()}${AUTH_ENDPOINTS.REFRESH}`, {
+          refresh: refreshToken,
+        });
 
-//         const newAccessToken = response.data.access;
-//         await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+        const newAccessToken = response.data.access;
+        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
 
-//         // Réessayer la requête originale avec le nouveau token
-//         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-//         return api(originalRequest);
-//       } catch (refreshError) {
-//         // Si le refresh échoue, déconnecter l'utilisateur
-//         await authService.signOut();
-//         return Promise.reject(refreshError);
-//       }
-//     }
+        // Réessayer la requête originale avec le nouveau token
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Si le refresh échoue, déconnecter l'utilisateur
+        await authService.signOut();
+        return Promise.reject(refreshError);
+      }
+    }
 
-//     return Promise.reject(error);
-//   }
-// );
+    return Promise.reject(error);
+  }
+);
 
 // ==================== SERVICE D'AUTHENTIFICATION ====================
 export const authService = {
@@ -98,22 +102,18 @@ export const authService = {
    * Connexion avec email/téléphone et mot de passe
    */
   async signIn(login: string, password: string): Promise<AuthSession> {
-    // try {
-      console.log("login ========= : ", login);
-      console.log("password ========= : ", password);
-      
-      const response = await api.post("/auth/login", {
+    try {
+      const response = await api.post(AUTH_ENDPOINTS.LOGIN, {
         login,
         password,
       });
 
-      console.log("response ========= : ", response.data);
       const { access, refresh, user } = response.data;
 
       // Stocker les tokens et l'utilisateur de manière sécurisée
-      // await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, access);
-      // await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refresh);
-      // await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(user));
+      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, access);
+      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refresh);
+      await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(user));
 
       return {
         user,
@@ -121,14 +121,45 @@ export const authService = {
         refreshToken: refresh,
         isAuthenticated: true,
       };
-    // } catch (error: any) {
-    //   console.error("Login error:", error.response?.data || error.message);
-    //   throw new Error(
-    //     error.response?.data?.detail || 
-    //     error.response?.data?.message ||
-    //     "Identifiants incorrects ou serveur indisponible"
-    //   );
-    // }
+    } catch (error: any) {
+      // console.error("Login error:", error);
+      
+      // Gestion d'erreurs spécifiques
+      if (error.response) {
+        // Erreur de réponse du serveur
+        const data = error.response.data;
+        
+        // Extraire le message d'erreur selon différents formats possibles
+        let errorMessage = "Identifiants incorrects";
+        
+        if (typeof data === 'string') {
+          // Si la réponse est une chaîne (HTML par exemple)
+          if (data.includes('Page not found') || data.includes('404')) {
+            errorMessage = "Endpoint non trouvé. Vérifiez la configuration du backend.";
+          } else {
+            errorMessage = "Erreur serveur";
+          }
+        } else if (typeof data === 'object') {
+          // Si la réponse est un objet JSON
+          errorMessage = 
+            data?.detail || 
+            data?.message ||
+            data?.error ||
+            data?.non_field_errors?.[0] ||
+            (data?.login && `Login: ${data.login[0]}`) ||
+            (data?.password && `Password: ${data.password[0]}`) ||
+            "Identifiants incorrects";
+        }
+        
+        throw new Error(errorMessage);
+      } else if (error.request) {
+        // Pas de réponse du serveur
+        throw new Error("Serveur indisponible. Vérifiez votre connexion.");
+      } else {
+        // Autre erreur
+        throw new Error(error.message || "Une erreur est survenue lors de la connexion.");
+      }
+    }
   },
 
   /**
@@ -140,7 +171,7 @@ export const authService = {
       
       // Optionnel : appeler l'endpoint de logout du backend
       if (refreshToken) {
-        await api.post("/auth/logout/", { refresh: refreshToken }).catch(() => {
+        await api.post(AUTH_ENDPOINTS.LOGOUT, { refresh: refreshToken }).catch(() => {
           // Ignorer les erreurs de logout backend
         });
       }
@@ -199,7 +230,7 @@ export const authService = {
       throw new Error("No refresh token available");
     }
 
-    const response = await api.post<{ access: string }>("/auth/refresh/", {
+    const response = await api.post<{ access: string }>(AUTH_ENDPOINTS.REFRESH, {
       refresh: refreshToken,
     });
 
