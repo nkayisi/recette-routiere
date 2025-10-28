@@ -58,7 +58,7 @@ export async function createPerception(
     if (perceptionData.type_perception === "peage") {
       payload.type_engin = perceptionData.vehicule_type;
       payload.categorie_engin = perceptionData.categorie;
-      payload.usage_engin = perceptionData.usage;
+      payload.usage_engin = perceptionData.usage.toLowerCase();
 
       // Calculer le montant automatiquement pour le péage
       const prices: Record<string, number> = {
@@ -74,7 +74,7 @@ export async function createPerception(
       // Taxe routière
       payload.poids = parseInt(perceptionData.poids);
       payload.cylindree = parseInt(perceptionData.cylindree);
-      payload.usage_engin = perceptionData.usage;
+      payload.usage_engin = perceptionData.usage.toLowerCase();
       payload.montant = parseFloat(perceptionData.montant);
     }
 

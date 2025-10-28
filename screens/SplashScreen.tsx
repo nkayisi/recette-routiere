@@ -1,29 +1,48 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useAuth } from "@/lib/auth/useAuth";
+import { authService } from "@/lib/auth/auth-client";
 
 export default function SplashScreen() {
   const router = useRouter();
   const { session, loading } = useAuth();
+  const [validatingSession, setValidatingSession] = useState(false);
 
   useEffect(() => {
     // Attendre que le chargement de la session soit terminé
     if (loading) return;
 
-    // Délai de 2 secondes pour afficher le splash screen
-    const timer = setTimeout(() => {
+    const checkSession = async () => {
+      // Si l'utilisateur semble authentifié, valider la session
       if (session.isAuthenticated) {
-        router.replace("/home");
-      } else {
-        router.replace("/login");
-      }
-    }, 2000);
+        setValidatingSession(true);
+        const isValid = await authService.validateSession();
+        setValidatingSession(false);
 
-    // Nettoyer le timer si le composant est démonté
-    return () => clearTimeout(timer);
+        if (!isValid) {
+          // Session invalide (token blacklisté/expiré)
+          console.log("🔒 Session expirée détectée au démarrage");
+          router.replace("/login");
+          return;
+        }
+      }
+
+      // Délai de 2 secondes pour afficher le splash screen
+      const timer = setTimeout(() => {
+        if (session.isAuthenticated) {
+          router.replace("/home");
+        } else {
+          router.replace("/login");
+        }
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    };
+
+    checkSession();
   }, [loading, session.isAuthenticated]);
 
 
@@ -45,7 +64,9 @@ export default function SplashScreen() {
 
       {/* Loading indicator */}
       <View className="mt-12">
-        <Text className="text-white text-sm">Chargement...</Text>
+        <Text className="text-white text-sm">
+          {validatingSession ? "Vérification de la session..." : "Chargement..."}
+        </Text>
       </View>
     </View>
   );

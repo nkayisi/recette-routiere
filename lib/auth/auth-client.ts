@@ -57,37 +57,119 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Variables pour éviter les appels multiples
+let isRefreshing = false;
+let isSessionExpired = false; // Flag pour éviter de traiter plusieurs fois l'expiration
+let failedQueue: Array<{ resolve: (value?: any) => void; reject: (reason?: any) => void }> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Intercepteur pour gérer le refresh token automatiquement
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
+    // Si la session a déjà expiré, rejeter immédiatement
+    if (isSessionExpired) {
+      const sessionExpiredError = new Error("SESSION_EXPIRED");
+      (sessionExpiredError as any).isSessionExpired = true;
+      return Promise.reject(sessionExpiredError);
+    }
+
     // Si erreur 401 et pas déjà tenté de refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // Si un refresh est déjà en cours, mettre en file d'attente
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
         
         if (!refreshToken) {
-          throw new Error("No refresh token");
+          throw new Error("No refresh token available");
         }
 
         // Appeler l'endpoint de refresh
-        const response = await axios.post(`${getBackendURL()}${AUTH_ENDPOINTS.REFRESH}`, {
-          refresh: refreshToken,
-        });
+        const response = await axios.post(
+          `${getBackendURL()}${AUTH_ENDPOINTS.REFRESH}`,
+          { refresh: refreshToken },
+          { timeout: TIMEOUTS.REFRESH }
+        );
 
         const newAccessToken = response.data.access;
         await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
 
+        // Traiter la file d'attente
+        processQueue(null, newAccessToken);
+        isRefreshing = false;
+
         // Réessayer la requête originale avec le nouveau token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
-      } catch (refreshError) {
-        // Si le refresh échoue, déconnecter l'utilisateur
-        await authService.signOut();
+      } catch (refreshError: any) {
+        // Traiter la file d'attente avec l'erreur
+        processQueue(refreshError, null);
+        isRefreshing = false;
+
+        // Détecter si le refresh token est blacklisté/expiré
+        const isTokenBlacklisted = 
+          refreshError.response?.status === 401 ||
+          refreshError.response?.data?.code === "token_not_valid" ||
+          refreshError.response?.data?.detail?.includes("blacklisted") ||
+          refreshError.response?.data?.detail?.includes("expired");
+
+        if (isTokenBlacklisted) {
+          console.log("🔒 Refresh token blacklisté ou expiré - Déconnexion automatique");
+          
+          // Marquer la session comme expirée pour éviter les tentatives futures
+          isSessionExpired = true;
+          
+          // Nettoyer le storage directement SANS appeler l'API de logout
+          // pour éviter une boucle infinie
+          try {
+            await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+            await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+            await SecureStore.deleteItemAsync(STORAGE_KEYS.USER);
+          } catch (cleanupError) {
+            console.error("Erreur lors du nettoyage du storage:", cleanupError);
+          }
+          
+          // Créer une erreur personnalisée pour informer l'UI
+          const sessionExpiredError = new Error("SESSION_EXPIRED");
+          (sessionExpiredError as any).isSessionExpired = true;
+          return Promise.reject(sessionExpiredError);
+        }
+
+        // Si autre erreur de refresh, nettoyer le storage aussi
+        try {
+          await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+          await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+          await SecureStore.deleteItemAsync(STORAGE_KEYS.USER);
+        } catch (cleanupError) {
+          console.error("Erreur lors du nettoyage du storage:", cleanupError);
+        }
+        
         return Promise.reject(refreshError);
       }
     }
@@ -114,6 +196,9 @@ export const authService = {
       await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, access);
       await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refresh);
       await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(user));
+
+      // Réinitialiser le flag de session expirée
+      isSessionExpired = false;
 
       return {
         user,
@@ -246,5 +331,48 @@ export const authService = {
   async isAuthenticated(): Promise<boolean> {
     const session = await this.getSession();
     return session.isAuthenticated;
+  },
+
+  /**
+   * Valider la session actuelle en testant le refresh token
+   * Utile au démarrage de l'app pour vérifier si la session est toujours valide
+   * 
+   * @returns true si la session est valide, false sinon
+   */
+  async validateSession(): Promise<boolean> {
+    try {
+      const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+      
+      if (!refreshToken) {
+        return false;
+      }
+
+      // Tester le refresh token
+      const response = await axios.post(
+        `${getBackendURL()}${AUTH_ENDPOINTS.REFRESH}`,
+        { refresh: refreshToken },
+        { timeout: TIMEOUTS.REFRESH }
+      );
+
+      // Si le refresh fonctionne, mettre à jour l'access token
+      const newAccessToken = response.data.access;
+      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+
+      return true;
+    } catch (error: any) {
+      // Si le refresh échoue (token blacklisté/expiré), nettoyer la session
+      const isTokenInvalid = 
+        error.response?.status === 401 ||
+        error.response?.data?.code === "token_not_valid" ||
+        error.response?.data?.detail?.includes("blacklisted") ||
+        error.response?.data?.detail?.includes("expired");
+
+      if (isTokenInvalid) {
+        console.log("🔒 Session invalide détectée - Nettoyage du storage");
+        await this.signOut();
+      }
+
+      return false;
+    }
   },
 };

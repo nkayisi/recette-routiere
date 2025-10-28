@@ -1,7 +1,11 @@
 import { Stack } from "expo-router";
+import { useSessionExpiration } from "@/lib/auth/useSessionExpiration";
 import "../global.css";
 
 export default function RootLayout() {
+  // Gérer automatiquement l'expiration de session
+  useSessionExpiration();
+
   return (
     <Stack
       screenOptions={{
