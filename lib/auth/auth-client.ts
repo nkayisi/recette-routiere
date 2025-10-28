@@ -276,6 +276,8 @@ export const authService = {
 
   /**
    * Récupérer la session actuelle
+   * La session est considérée valide si le REFRESH TOKEN existe
+   * L'access token peut être expiré, il sera rafraîchi automatiquement
    */
   async getSession(): Promise<AuthSession> {
     try {
@@ -283,7 +285,9 @@ export const authService = {
       const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
       const userJson = await SecureStore.getItemAsync(STORAGE_KEYS.USER);
 
-      if (!accessToken || !refreshToken || !userJson) {
+      // La session est valide SI le refresh token existe
+      // L'access token et l'utilisateur sont optionnels (peuvent être rafraîchis)
+      if (!refreshToken) {
         return {
           user: null,
           accessToken: null,
@@ -292,13 +296,15 @@ export const authService = {
         };
       }
 
-      const user = JSON.parse(userJson) as DjangoUser;
+      // Si l'utilisateur n'est pas en cache, on considère quand même la session valide
+      // car le refresh token existe
+      const user = userJson ? JSON.parse(userJson) as DjangoUser : null;
 
       return {
         user,
         accessToken,
         refreshToken,
-        isAuthenticated: true,
+        isAuthenticated: true, // Basé uniquement sur la présence du refresh token
       };
     } catch (error) {
       console.error("Get session error:", error);
@@ -342,18 +348,22 @@ export const authService = {
   /**
    * Valider la session actuelle en testant le refresh token
    * Utile au démarrage de l'app pour vérifier si la session est toujours valide
+   * Cette fonction se base UNIQUEMENT sur le refresh token
    * 
-   * @returns true si la session est valide, false sinon
+   * @returns true si la session est valide (refresh token valide), false sinon
    */
   async validateSession(): Promise<boolean> {
     try {
       const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
       
       if (!refreshToken) {
+        console.log("❌ Pas de refresh token - Session invalide");
         return false;
       }
 
-      // Tester le refresh token
+      console.log("🔄 Validation de la session avec le refresh token...");
+
+      // Tester le refresh token en appelant l'endpoint de refresh
       const response = await axios.post(
         `${getBackendURL()}${AUTH_ENDPOINTS.REFRESH}`,
         { refresh: refreshToken },
@@ -364,8 +374,15 @@ export const authService = {
       const newAccessToken = response.data.access;
       await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
 
+      console.log("✅ Session valide - Access token rafraîchi");
+      
+      // Réinitialiser le flag de session expirée
+      isSessionExpired = false;
+
       return true;
     } catch (error: any) {
+      console.error("❌ Erreur lors de la validation de session:", error.message);
+      
       // Si le refresh échoue (token blacklisté/expiré), nettoyer la session
       const isTokenInvalid = 
         error.response?.status === 401 ||
@@ -374,8 +391,10 @@ export const authService = {
         error.response?.data?.detail?.includes("expired");
 
       if (isTokenInvalid) {
-        console.log("🔒 Session invalide détectée - Nettoyage du storage");
+        console.log("🔒 Refresh token invalide/expiré - Nettoyage du storage");
         await this.signOut();
+      } else {
+        console.warn("⚠️ Erreur réseau lors de la validation - Session conservée");
       }
 
       return false;
