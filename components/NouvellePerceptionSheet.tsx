@@ -14,8 +14,9 @@ interface Props {
 }
 
 export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }: Props) {
-  const [typePerception, setTypePerception] = useState<"taxe" | "peage">("peage");
+  const [typePerception, setTypePerception] = useState<"taxe_routiere" | "peage">("peage");
   const [loading, setLoading] = useState(false);
+  const [formKey, setFormKey] = useState(0); // Clé pour forcer le re-render
   
   // React Hook Form avec validation Zod
   const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<any>({
@@ -30,14 +31,32 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
   const watchVehiculeType = watch("vehicule_type");
   const watchCategorie = watch("categorie");
 
-  // Réinitialiser le formulaire quand le type change
+  // Réinitialiser le formulaire quand le type de perception change
   useEffect(() => {
+    // Incrémenter la clé pour forcer le re-render complet du formulaire
+    setFormKey(prev => prev + 1);
+    
+    // Réinitialiser tous les champs
     reset({
       type_perception: typePerception,
       numero_plaque: "",
       description: "",
+      usage: undefined,
+      vehicule_type: undefined,
+      categorie: undefined,
+      poids: "",
+      montant: "",
     });
   }, [typePerception, reset]);
+
+  // Réinitialiser les champs spécifiques quand le type d'engin change
+  useEffect(() => {
+    if (watchVehiculeType === "moto") {
+      setValue("categorie", "standard");
+    } else if (watchVehiculeType === "vehicule") {
+      setValue("categorie", undefined);
+    }
+  }, [watchVehiculeType, setValue]);
 
   // Fonction pour fermer et réinitialiser
   const handleClose = () => {
@@ -58,18 +77,25 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
       "vehicule-transport": 5000,
     };
     
-    const key = `${watchVehiculeType}-${watchCategorie}`;
+    // Pour moto, toujours utiliser "standard"
+    const key = watchVehiculeType === "moto" 
+      ? "moto-standard" 
+      : `${watchVehiculeType}-${watchCategorie}`;
     return prices[key] ? `${prices[key]} FC` : "";
   };
 
   // Fonction de soumission
   const onSubmit = async (data: any) => {
+    console.log("🚀 Soumission du formulaire avec:", data);
+    console.log("📋 Type de perception:", typePerception);
+    console.log("❌ Erreurs de validation:", errors);
+    
     setLoading(true);
     try {
       // Appeler l'API pour créer la perception
       const perception = await createPerception(data);
       
-      console.log("Perception créée:", perception);
+      console.log("✅ Perception créée:", perception);
       
       Alert.alert("Succès", "Perception enregistrée avec succès!", [
         {
@@ -127,8 +153,8 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
                   <Text className="text-center font-semibold">Péage</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  className={`flex-1 border border-[#e5e5e5] rounded-xl p-4 ${typePerception === "taxe" ? "bg-card-blue" : "bg-white"}`}
-                  onPress={() => setTypePerception("taxe")}
+                  className={`flex-1 border border-[#e5e5e5] rounded-xl p-4 ${typePerception === "taxe_routiere" ? "bg-card-blue" : "bg-white"}`}
+                  onPress={() => setTypePerception("taxe_routiere")}
                 >
                   <Text className="text-center font-semibold">Taxe routière</Text>
                 </TouchableOpacity>
@@ -136,8 +162,8 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
             </View>
 
             {/* Champs pour TAXE ROUTIÈRE */}
-            {typePerception === "taxe" && (
-              <>
+            {typePerception === "taxe_routiere" && (
+              <View key={`taxe-${formKey}`}>
                 {/* Poids */}
                 <View className="mb-4">
                   <Text className="text-sm font-semibold text-gray-700 mb-2">Poids du véhicule (kg) *</Text>
@@ -156,27 +182,6 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
                   />
                   {errors.poids && (
                     <Text className="text-red-500 text-sm mt-1">{errors.poids.message as string}</Text>
-                  )}
-                </View>
-
-                {/* Cylindrée */}
-                <View className="mb-4">
-                  <Text className="text-sm font-semibold text-gray-700 mb-2">Cylindrée (cm³) *</Text>
-                  <Controller
-                    control={control}
-                    name="cylindree"
-                    render={({ field: { onChange, value } }) => (
-                      <TextInput
-                        className="bg-white border border-[#e5e5e5] rounded-xl px-4 py-4 text-base"
-                        placeholder="Ex: 1600"
-                        keyboardType="numeric"
-                        value={value}
-                        onChangeText={onChange}
-                      />
-                    )}
-                  />
-                  {errors.cylindree && (
-                    <Text className="text-red-500 text-sm mt-1">{errors.cylindree.message as string}</Text>
                   )}
                 </View>
 
@@ -225,12 +230,12 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
                     <Text className="text-red-500 text-sm mt-1">{errors.montant.message as string}</Text>
                   )}
                 </View>
-              </>
+              </View>
             )}
 
             {/* Champs pour PÉAGE */}
             {typePerception === "peage" && (
-              <>
+              <View key={`peage-${formKey}`}>
                 {/* Type de l'engin */}
                 <View className="mb-4">
                   <Text className="text-sm font-semibold text-gray-700 mb-2">Type de l'engin *</Text>
@@ -243,7 +248,7 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
                           className={`flex-1 border rounded-xl p-4 ${value === "moto" ? "bg-card-blue border-blue-400" : "bg-white border-[#e5e5e5]"}`}
                           onPress={() => {
                             onChange("moto");
-                            setValue("categorie", "standard");
+                            setValue("categorie", 'standard');
                           }}
                         >
                           <View className="items-center">
@@ -255,7 +260,7 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
                           className={`flex-1 border rounded-xl p-4 ${value === "vehicule" ? "bg-card-blue border-blue-400" : "bg-white border-[#e5e5e5]"}`}
                           onPress={() => {
                             onChange("vehicule");
-                            setValue("categorie", "");
+                            setValue("categorie", undefined);
                           }}
                         >
                           <View className="items-center">
@@ -336,7 +341,7 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
                     <Text className="text-3xl font-bold text-black">{calculatePeagePrice()}</Text>
                   </View>
                 )}
-              </>
+              </View>
             )}
 
             {/* Numéro de plaque */}

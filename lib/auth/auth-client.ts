@@ -17,6 +17,8 @@ export interface DjangoUser {
   phone?: string;
   first_name?: string;
   last_name?: string;
+  agent_id?: number;
+  nom_poste?: string;
 }
 
 export interface DjangoLoginResponse {
@@ -133,11 +135,20 @@ api.interceptors.response.use(
         isRefreshing = false;
 
         // Détecter si le refresh token est blacklisté/expiré
+        // Seulement si c'est une réponse du serveur (pas une erreur réseau)
         const isTokenBlacklisted = 
-          refreshError.response?.status === 401 ||
-          refreshError.response?.data?.code === "token_not_valid" ||
-          refreshError.response?.data?.detail?.includes("blacklisted") ||
-          refreshError.response?.data?.detail?.includes("expired");
+          refreshError.response && (
+            (refreshError.response.status === 401 && 
+             (refreshError.response.data?.code === "token_not_valid" ||
+              refreshError.response.data?.detail?.toLowerCase().includes("blacklist") ||
+              refreshError.response.data?.detail?.toLowerCase().includes("invalid") ||
+              refreshError.response.data?.detail?.toLowerCase().includes("expired"))) ||
+            // Ou si le message d'erreur contient ces mots-clés
+            (refreshError.response.data?.detail && 
+             typeof refreshError.response.data.detail === "string" &&
+             (refreshError.response.data.detail.includes("Token is blacklisted") ||
+              refreshError.response.data.detail.includes("Token is invalid or expired")))
+          );
 
         if (isTokenBlacklisted) {
           console.log("🔒 Refresh token blacklisté ou expiré - Déconnexion automatique");
@@ -161,15 +172,10 @@ api.interceptors.response.use(
           return Promise.reject(sessionExpiredError);
         }
 
-        // Si autre erreur de refresh, nettoyer le storage aussi
-        try {
-          await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-          await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-          await SecureStore.deleteItemAsync(STORAGE_KEYS.USER);
-        } catch (cleanupError) {
-          console.error("Erreur lors du nettoyage du storage:", cleanupError);
-        }
-        
+        // Si autre erreur de refresh (réseau, serveur, etc.), 
+        // NE PAS nettoyer le storage - juste rejeter l'erreur
+        // L'utilisateur peut réessayer plus tard
+        console.warn("⚠️ Erreur lors du refresh token (non-critique):", refreshError.message);
         return Promise.reject(refreshError);
       }
     }
