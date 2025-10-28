@@ -53,9 +53,14 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
   useEffect(() => {
     if (watchVehiculeType === "moto") {
       setValue("categorie", "standard");
+      setValue("usage", undefined); // Réinitialiser usage
     } else if (watchVehiculeType === "vehicule") {
       setValue("categorie", undefined);
+      setValue("usage", undefined); // Réinitialiser usage
     }
+    
+    // Incrémenter formKey pour forcer le re-render des champs
+    setFormKey(prev => prev + 1);
   }, [watchVehiculeType, setValue]);
 
   // Fonction pour fermer et réinitialiser
