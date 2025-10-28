@@ -4,6 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { getAgentPerceptions, type Perception } from "@/lib/api/perception.api";
 import { useAuth } from "@/lib/auth/useAuth";
+import { useRouter } from "expo-router";
 
 interface Props {
   visible: boolean;
@@ -12,6 +13,7 @@ interface Props {
 
 export default function HistoriqueSheet({ visible, onClose }: Props) {
   const { user } = useAuth();
+  const router = useRouter();
   const [filter, setFilter] = useState<"all" | "today" | "week">("all");
   
   const handleClose = () => {
@@ -229,8 +231,8 @@ export default function HistoriqueSheet({ visible, onClose }: Props) {
                       <TouchableOpacity 
                         className="flex-1 flex-row items-center justify-center bg-blue-50 border border-blue-200 rounded-lg py-2"
                         onPress={() => {
-                          // TODO: Ouvrir modal de détails
-                          Alert.alert("Détails", `Perception #${item.id}\nNuméro: ${item.numero}`);
+                          onClose();
+                          router.push(`/perception/${item.id}` as any);
                         }}
                       >
                         <Ionicons name="eye-outline" size={16} color="#3b82f6" />
@@ -238,14 +240,34 @@ export default function HistoriqueSheet({ visible, onClose }: Props) {
                       </TouchableOpacity>
                       
                       <TouchableOpacity 
-                        className="flex-1 flex-row items-center justify-center bg-orange-50 border border-orange-200 rounded-lg py-2"
+                        className={`flex-1 flex-row items-center justify-center rounded-lg py-2 ${
+                          item.checkings_count === 0
+                            ? "bg-orange-50 border border-orange-200"
+                            : "bg-gray-100 border border-gray-200"
+                        }`}
                         onPress={() => {
-                          // TODO: Ouvrir modal d'édition
-                          Alert.alert("Édition", `Modifier la perception #${item.id}`);
+                          if (item.checkings_count === 0) {
+                            onClose();
+                            router.push(`/perception/edit/${item.id}` as any);
+                          } else {
+                            Alert.alert(
+                              "Modification impossible",
+                              `Cette perception a été vérifiée ${item.checkings_count} fois et ne peut plus être modifiée.`,
+                              [{ text: "OK" }]
+                            );
+                          }
                         }}
                       >
-                        <Ionicons name="create-outline" size={16} color="#f97316" />
-                        <Text className="text-orange-600 font-semibold text-sm ml-1">Modifier</Text>
+                        <Ionicons 
+                          name={item.checkings_count === 0 ? "create-outline" : "lock-closed-outline"} 
+                          size={16} 
+                          color={item.checkings_count === 0 ? "#f97316" : "#9ca3af"} 
+                        />
+                        <Text className={`font-semibold text-sm ml-1 ${
+                          item.checkings_count === 0 ? "text-orange-600" : "text-gray-400"
+                        }`}>
+                          {item.checkings_count === 0 ? "Modifier" : "Verrouillé"}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </View>

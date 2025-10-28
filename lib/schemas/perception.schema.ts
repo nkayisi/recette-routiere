@@ -10,7 +10,7 @@ const errorMessages = {
   },
   vehicule_type: "Le type de l'engin est requis",
   categorie: "La catégorie est requise",
-  poids: "Le poids de l'engin est requis",
+  poids_engin: "Le poids de l'engin est requis",
   usage: "L'usage de l'engin est requis",
   montant: "Le montant est requis",
 };
@@ -75,7 +75,7 @@ export const peageSchema = basePerceptionSchema
  */
 export const taxeSchema = basePerceptionSchema.extend({
   type_perception: z.literal("taxe_routiere"),
-  poids: z.string({ message: errorMessages.poids }).min(1, errorMessages.poids),
+  poids_engin: z.string({ message: errorMessages.poids_engin }).min(1, errorMessages.poids_engin),
   usage: z
     .enum(["Transport", "Commercial", "Agricole", "Personnel", "Professionnel", "Location"], {
       message: errorMessages.usage,

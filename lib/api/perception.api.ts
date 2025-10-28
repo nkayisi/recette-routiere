@@ -63,7 +63,7 @@ export interface Perception {
   type_engin?: "moto" | "vehicule";
   categorie_engin?: string;
   usage_engin?: string;
-  poids?: number;
+  poids_engin?: number;
   checkings_count: number;
   created_at: string;
   updated_at: string;
@@ -89,6 +89,20 @@ export interface GetPerceptionsParams {
   date_debut?: string; // Format: YYYY-MM-DD
   date_fin?: string; // Format: YYYY-MM-DD
   search?: string; // Recherche par numéro de plaque
+}
+
+/**
+ * Interface pour les résultats de recherche
+ */
+export interface SearchResult {
+  id: number;
+  type: "perception";
+  numero: string;
+  immatriculation: string;
+  montant: string;
+  type_recette: "peage" | "taxe_routiere";
+  created_at: string;
+  poste_nom: string;
 }
 
 /**
@@ -149,7 +163,7 @@ export async function createPerception(
     } else {
       // Taxe routière
       payload.type_engin = 'vehicule';
-      payload.poids = parseInt(perceptionData.poids);
+      payload.poids_engin = parseInt(perceptionData.poids_engin);
       payload.usage_engin = perceptionData.usage.toLowerCase();
       payload.montant = parseFloat(perceptionData.montant);
     }
@@ -398,6 +412,195 @@ export async function getPerceptionStats(
       // Erreur d'authentification (401)
       if (error.response.status === 401) {
         throw new Error("Vous devez être connecté pour voir les statistiques");
+      }
+
+      // Erreur serveur (500)
+      if (error.response.status >= 500) {
+        throw new Error("Erreur serveur. Veuillez réessayer plus tard.");
+      }
+
+      throw new Error(
+        error.response.data?.detail || "Une erreur est survenue"
+      );
+    }
+
+    // Erreur réseau
+    if (error.request) {
+      throw new Error(
+        "Impossible de contacter le serveur. Vérifiez votre connexion internet."
+      );
+    }
+
+    // Autre erreur
+    throw new Error(error.message || "Une erreur inattendue est survenue");
+  }
+}
+
+/**
+ * Rechercher parmi toutes les perceptions
+ * 
+ * @param query - Terme de recherche (numéro de plaque, numéro de perception, etc.)
+ * @returns Promise<SearchResult[]> - Liste des résultats de recherche
+ * 
+ * @example
+ * ```typescript
+ * const results = await searchPerceptions("CD-123");
+ * console.log(results); // [{ id: 1, type: "perception", ... }]
+ * ```
+ */
+export async function searchPerceptions(query: string): Promise<SearchResult[]> {
+  try {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+
+    // Appel API avec le paramètre de recherche
+    const { data } = await api.get<PaginatedResponse<Perception>>(
+      `/recette-routiere/recettes/?search=${encodeURIComponent(query.trim())}`
+    );
+
+    // Transformer les perceptions en résultats de recherche
+    const results: SearchResult[] = data.results.map((perception) => ({
+      id: perception.id,
+      type: "perception" as const,
+      numero: perception.numero,
+      immatriculation: perception.immatriculation,
+      montant: perception.montant,
+      type_recette: perception.type_recette,
+      created_at: perception.created_at,
+      poste_nom: perception.poste.nom,
+    }));
+
+    return results;
+  } catch (error: any) {
+    // Gestion des erreurs
+    if (error.response) {
+      // Erreur d'authentification (401)
+      if (error.response.status === 401) {
+        throw new Error("Vous devez être connecté pour effectuer une recherche");
+      }
+
+      // Erreur serveur (500)
+      if (error.response.status >= 500) {
+        throw new Error("Erreur serveur. Veuillez réessayer plus tard.");
+      }
+
+      throw new Error(
+        error.response.data?.detail || "Une erreur est survenue"
+      );
+    }
+
+    // Erreur réseau
+    if (error.request) {
+      throw new Error(
+        "Impossible de contacter le serveur. Vérifiez votre connexion internet."
+      );
+    }
+
+    // Autre erreur
+    throw new Error(error.message || "Une erreur inattendue est survenue");
+  }
+}
+
+/**
+ * Mettre à jour une perception existante
+ * 
+ * @param id - ID de la perception à modifier
+ * @param perceptionData - Données du formulaire validées par Zod
+ * @returns Promise<Perception> - La perception mise à jour
+ * 
+ * @example
+ * ```typescript
+ * const data = {
+ *   type_perception: "peage",
+ *   vehicule_type: "vehicule",
+ *   categorie: "leger",
+ *   numero_plaque: "CD-12345",
+ *   description: "Note modifiée"
+ * };
+ * 
+ * const perception = await updatePerception(123, data);
+ * ```
+ */
+export async function updatePerception(
+  id: number,
+  perceptionData: PerceptionFormData
+): Promise<Perception> {
+  try {
+    console.log("📝 Mise à jour de la perception:", id, perceptionData);
+    
+    // Préparer les données pour l'API (même logique que createPerception)
+    const payload: any = {
+      type_recette: perceptionData.type_perception,
+      immatriculation: perceptionData.numero_plaque.toUpperCase(),
+      description: perceptionData.description || null,
+    };
+
+    if (perceptionData.type_perception === "peage") {
+      payload.type_engin = perceptionData.vehicule_type;
+      
+      if (perceptionData.vehicule_type === "vehicule" && perceptionData.categorie) {
+        payload.categorie_engin = perceptionData.categorie;
+      }
+      
+      payload.usage_engin = perceptionData.usage.toLowerCase();
+
+      // Calculer le montant automatiquement pour le péage
+      const prices: Record<string, number> = {
+        "moto": 500,
+        "vehicule-leger": 1000,
+        "vehicule-moyen": 2000,
+        "vehicule-lourd": 3500,
+        "vehicule-transport": 5000,
+      };
+      const key = perceptionData.vehicule_type === "moto" 
+        ? "moto" 
+        : `${perceptionData.vehicule_type}-${perceptionData.categorie}`;
+      payload.montant = prices[key] || 0;
+    } else {
+      // Taxe routière
+      payload.type_engin = 'vehicule';
+      payload.poids_engin = parseInt(perceptionData.poids_engin);
+      payload.usage_engin = perceptionData.usage.toLowerCase();
+      payload.montant = parseFloat(perceptionData.montant);
+    }
+
+    console.log("📤 Payload de mise à jour:", payload);
+
+    // Appel API PATCH pour mettre à jour
+    const { data } = await api.patch<Perception>(
+      `/recette-routiere/recettes/${id}/`,
+      payload
+    );
+    
+    console.log("✅ Perception mise à jour:", data);
+
+    return data;
+  } catch (error: any) {
+    // Gestion des erreurs
+    if (error.response) {
+      // Erreur de validation Django (400)
+      if (error.response.status === 400) {
+        const errors = error.response.data;
+        const errorMessages = Object.entries(errors)
+          .map(([field, messages]) => `${field}: ${messages}`)
+          .join("\n");
+        throw new Error(errorMessages);
+      }
+
+      // Erreur d'authentification (401)
+      if (error.response.status === 401) {
+        throw new Error("Vous devez être connecté pour modifier une perception");
+      }
+
+      // Erreur de permission (403)
+      if (error.response.status === 403) {
+        throw new Error("Vous n'avez pas la permission de modifier cette perception");
+      }
+
+      // Erreur 404 - Perception non trouvée
+      if (error.response.status === 404) {
+        throw new Error("Perception non trouvée");
       }
 
       // Erreur serveur (500)

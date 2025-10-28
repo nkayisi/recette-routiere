@@ -44,7 +44,7 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
       usage: undefined,
       vehicule_type: undefined,
       categorie: undefined,
-      poids: "",
+      poids_engin: "",
       montant: "",
     });
   }, [typePerception, reset]);
@@ -174,7 +174,7 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
                   <Text className="text-sm font-semibold text-gray-700 mb-2">Poids du véhicule (kg) *</Text>
                   <Controller
                     control={control}
-                    name="poids"
+                    name="poids_engin"
                     render={({ field: { onChange, value } }) => (
                       <TextInput
                         className="bg-white border border-[#e5e5e5] rounded-xl px-4 py-4 text-base"
@@ -185,8 +185,8 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
                       />
                     )}
                   />
-                  {errors.poids && (
-                    <Text className="text-red-500 text-sm mt-1">{errors.poids.message as string}</Text>
+                  {errors.poids_engin && (
+                    <Text className="text-red-500 text-sm mt-1">{errors.poids_engin.message as string}</Text>
                   )}
                 </View>
 
