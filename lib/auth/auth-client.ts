@@ -121,6 +121,7 @@ api.interceptors.response.use(
 
         const newAccessToken = response.data.access;
         await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, response.data.refresh);
 
         // Traiter la file d'attente
         processQueue(null, newAccessToken);
