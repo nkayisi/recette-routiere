@@ -624,3 +624,107 @@ export async function updatePerception(
     throw new Error(error.message || "Une erreur inattendue est survenue");
   }
 }
+
+/**
+ * Interface pour le résultat de vérification d'un reçu
+ */
+export interface VerifyRecuResult {
+  status: "found" | "already_checked" | "not_found";
+  recette?: Perception;
+  message?: string;
+}
+
+/**
+ * Vérifier un reçu par son numéro (QR code scan)
+ * 
+ * @param numero - Numéro du reçu (ex: REC-202510-000021)
+ * @returns Promise<VerifyRecuResult> - Résultat de la vérification
+ * 
+ * Cas possibles:
+ * - Status 200: Reçu trouvé et non encore vérifié au poste actuel
+ * - Status 208: Reçu trouvé mais déjà vérifié à ce poste
+ * - Status 404: Reçu introuvable (probablement un faux)
+ * 
+ * @example
+ * ```typescript
+ * const result = await verifyRecuByNumero("REC-202510-000021");
+ * if (result.status === "found") {
+ *   console.log(result.recette.montant);
+ * }
+ * ```
+ */
+export async function verifyRecuByNumero(numero: string): Promise<VerifyRecuResult> {
+  try {
+    console.log("🔍 Vérification du reçu:", numero);
+
+    // Appel API pour vérifier le reçu
+    const res = await api.post(
+      `/recette-routiere/recettes/check/`,
+      { "numero": numero }
+    );
+
+    // Cas 1: Status 200 - Reçu trouvé et non encore vérifié
+    if (res.status === 200) {
+      console.log("✅ Reçu trouvé (première vérification):", res.data?.recette);
+      return {
+        status: "found",
+        recette: res.data?.recette,
+        message: res.data?.message
+      };
+    }
+
+    // Cas 2: Status 208 - Reçu déjà vérifié à ce poste
+    if (res.status === 208) {
+      console.log("⚠️ Reçu déjà vérifié:", res.data?.recette);
+      return {
+        status: "already_checked",
+        recette: res.data?.recette,
+        message: res.data?.message
+      };
+    }
+
+    // Autre status inattendu
+    console.warn("⚠️ Status inattendu:", res.status);
+    return {
+      status: "not_found",
+      message: "Réponse inattendue du serveur"
+    };
+  } catch (error: any) {
+    // Gestion des erreurs
+    if (error.response) {
+      // Cas 3: Status 404 - Reçu introuvable (probablement un faux)
+      if (error.response.status === 404) {
+        console.log("❌ Reçu introuvable (potentiel faux)");
+        return {
+          status: "not_found",
+          message: error.response.data?.message || "Reçu introuvable. Ce reçu n'existe pas dans notre système."
+        };
+      }
+
+      // Erreur d'authentification (401)
+      if (error.response.status === 401) {
+        throw new Error("Vous devez être connecté pour vérifier un reçu");
+      }
+
+      // Erreur serveur (500)
+      if (error.response.status >= 500) {
+        throw new Error("Erreur serveur. Veuillez réessayer plus tard.");
+      }
+
+      // Autre erreur HTTP
+      throw new Error(
+        error.response.data?.message || error.response.data?.detail || "Une erreur est survenue"
+      );
+    }
+
+    // Erreur réseau
+    if (error.request) {
+      throw new Error(
+        "Impossible de contacter le serveur. Vérifiez votre connexion internet."
+      );
+    }
+
+    // Autre erreur
+    throw new Error(error.message || "Une erreur inattendue est survenue");
+  }
+}
