@@ -55,7 +55,7 @@ export default function SearchModal({ visible, onClose, initialSearchText = "" }
   // Gérer le clic sur un résultat
   const handleResultPress = (result: SearchResult) => {
     handleSearch(result.immatriculation);
-    onClose();
+    handleClose();
     // Navigation vers les détails de la perception
     router.push(`/perception/${result.id}` as any);
   };
@@ -75,12 +75,19 @@ export default function SearchModal({ visible, onClose, initialSearchText = "" }
     return `${parseFloat(amount).toLocaleString("fr-FR")} FC`;
   };
 
+  // Réinitialiser le champ de recherche à la fermeture
+  const handleClose = () => {
+    setSearchText("");
+    setDebouncedSearch("");
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
       transparent={false}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <KeyboardAvoidingView 
         className="flex-1 bg-white"
@@ -91,7 +98,7 @@ export default function SearchModal({ visible, onClose, initialSearchText = "" }
           <View className="px-5 pt-[60px] pb-4 border-b border-gray-200">
             <View className="flex-row items-center gap-3 mb-4">
               <TouchableOpacity
-                onPress={onClose}
+                onPress={handleClose}
                 className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center"
               >
                 <Ionicons name="arrow-back" size={24} color="#000" />

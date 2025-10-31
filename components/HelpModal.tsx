@@ -18,6 +18,13 @@ export default function HelpModal({ visible, onClose }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
+  // Réinitialiser l'état à la fermeture
+  const handleClose = () => {
+    setExpandedId(null);
+    setSelectedCategory("all");
+    onClose();
+  };
+
   const categories = [
     { id: "all", label: "Tout", icon: "apps" },
     { id: "perception", label: "Perceptions", icon: "document-text" },
@@ -89,14 +96,14 @@ export default function HelpModal({ visible, onClose }: Props) {
       visible={visible}
       animationType="slide"
       transparent={false}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View className="flex-1 bg-white">
         {/* Header */}
         <View className="px-5 pt-[60px] pb-4 border-b border-gray-200">
           <View className="flex-row items-center gap-3 mb-4">
             <TouchableOpacity
-              onPress={onClose}
+              onPress={handleClose}
               className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center"
             >
               <Ionicons name="close" size={24} color="#000" />

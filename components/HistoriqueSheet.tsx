@@ -17,6 +17,7 @@ export default function HistoriqueSheet({ visible, onClose }: Props) {
   const [filter, setFilter] = useState<"all" | "today" | "week">("all");
   
   const handleClose = () => {
+    setFilter("all");
     onClose();
   };
 

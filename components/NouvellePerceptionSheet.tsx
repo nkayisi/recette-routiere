@@ -31,6 +31,25 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
   const watchVehiculeType = watch("vehicule_type");
   const watchCategorie = watch("categorie");
 
+  // Réinitialiser le formulaire quand le modal se ferme
+  useEffect(() => {
+    if (!visible) {
+      setTypePerception("peage");
+      setLoading(false);
+      setFormKey(0);
+      reset({
+        type_perception: "peage",
+        numero_plaque: "",
+        description: "",
+        usage: undefined,
+        vehicule_type: undefined,
+        categorie: undefined,
+        poids_engin: "",
+        montant: "",
+      });
+    }
+  }, [visible, reset]);
+
   // Réinitialiser le formulaire quand le type de perception change
   useEffect(() => {
     // Incrémenter la clé pour forcer le re-render complet du formulaire
@@ -65,8 +84,23 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
 
   // Fonction pour fermer et réinitialiser
   const handleClose = () => {
-    reset();
+    // Réinitialiser tous les états
     setTypePerception("peage");
+    setLoading(false);
+    setFormKey(0);
+    
+    // Réinitialiser le formulaire avec les valeurs par défaut
+    reset({
+      type_perception: "peage",
+      numero_plaque: "",
+      description: "",
+      usage: undefined,
+      vehicule_type: undefined,
+      categorie: undefined,
+      poids_engin: "",
+      montant: "",
+    });
+    
     onClose();
   };
 

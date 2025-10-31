@@ -57,10 +57,11 @@ export default function ProfileScreen() {
   }
 
   const menuItems = [
-    { id: 1, icon: "person-outline", label: "Informations personnelles", color: "bg-card-blue" },
-    { id: 2, icon: "checkmark-done-outline", label: "Mes vérifications", color: "bg-card-green", onPress: () => router.push("/verifications") },
-    { id: 3, icon: "stats-chart-outline", label: "Mes statistiques", color: "bg-card-gray" },
-    { id: 4, icon: "document-text-outline", label: "Mes rapports", color: "bg-card-yellow" },
+    { id: 1, icon: "person-outline", label: "Informations personnelles", color: "bg-card-blue", onPress: () => router.push("/profile/informations") },
+    { id: 2, icon: "checkmark-done-outline", label: "Mes vérifications & contrôles", color: "bg-card-green", onPress: () => router.push("/verifications") },
+    { id: 3, icon: "warning-outline", label: "Mes signalements", color: "bg-card-yellow", onPress: () => router.push("/profile/signalements") },
+    { id: 4, icon: "stats-chart-outline", label: "Mes statistiques", color: "bg-card-gray", onPress: () => router.push("/profile/statistiques") },
+    { id: 5, icon: "document-text-outline", label: "Mes rapports", color: "bg-card-yellow" },
     { id: 6, icon: "settings-outline", label: "Paramètres", color: "bg-card-blue" },
     { id: 7, icon: "help-circle-outline", label: "Aide & Support", color: "bg-card-green" },
   ];
