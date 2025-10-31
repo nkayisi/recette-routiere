@@ -1,4 +1,4 @@
-import { VALIDATION } from "./config";
+import { VALIDATION } from "../auth/config";
 
 /**
  * Utilitaires de validation pour l'authentification

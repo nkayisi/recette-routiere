@@ -106,7 +106,7 @@ export default function HistoriqueSheet({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
       <View className="flex-1 justify-end bg-black/50">
-        <View className="bg-white rounded-t-[24px] h-[80%] px-5 pt-6">
+        <View className="bg-white rounded-t-[24px] h-[90%] px-5 pt-6">
           <View className="flex-row justify-between items-center mb-6">
             <Text className="text-2xl font-bold text-black">Historique Rapide</Text>
             <TouchableOpacity onPress={handleClose} className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center">

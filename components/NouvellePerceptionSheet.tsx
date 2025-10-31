@@ -128,7 +128,7 @@ export default function NouvellePerceptionSheet({ visible, onClose, onSuccess }:
     >
       <View className="flex-1 justify-end bg-black/50">
         <KeyboardAvoidingView 
-          className="bg-white rounded-t-[24px] h-[85%]"
+          className="bg-white rounded-t-[24px] h-[90%]"
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <ScrollView 

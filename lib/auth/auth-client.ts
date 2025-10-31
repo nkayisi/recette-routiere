@@ -120,11 +120,13 @@ api.interceptors.response.use(
         );
 
         const newAccessToken = response.data.access;
+        const newRefreshToken = response.data.refresh;
         await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, response.data.refresh);
+        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
 
         // Traiter la file d'attente
         processQueue(null, newAccessToken);
+        processQueue(null, newRefreshToken);
         isRefreshing = false;
 
         // Réessayer la requête originale avec le nouveau token
@@ -328,12 +330,14 @@ export const authService = {
       throw new Error("No refresh token available");
     }
 
-    const response = await api.post<{ access: string }>(AUTH_ENDPOINTS.REFRESH, {
+    const response = await api.post<{ access: string, refresh: string }>(AUTH_ENDPOINTS.REFRESH, {
       refresh: refreshToken,
     });
 
     const newAccessToken = response.data.access;
+    const newRefreshToken = response.data.refresh;
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+    await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
 
     return newAccessToken;
   },
@@ -373,7 +377,9 @@ export const authService = {
 
       // Si le refresh fonctionne, mettre à jour l'access token
       const newAccessToken = response.data.access;
+      const newRefreshToken = response.data.refresh;
       await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
 
       console.log("✅ Session valide - Access token rafraîchi");
       

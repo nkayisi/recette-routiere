@@ -48,7 +48,7 @@ export default function ProfileScreen() {
         </Text>
         <TouchableOpacity
           onPress={() => router.push("/login")}
-          className="bg-black rounded-2xl px-8 py-4 mt-6"
+          className="bg-black rounded-[20px] px-8 py-4 mt-6"
         >
           <Text className="text-white font-bold">Se connecter</Text>
         </TouchableOpacity>
@@ -58,11 +58,11 @@ export default function ProfileScreen() {
 
   const menuItems = [
     { id: 1, icon: "person-outline", label: "Informations personnelles", color: "bg-card-blue" },
-    { id: 2, icon: "stats-chart-outline", label: "Mes statistiques", color: "bg-card-green" },
-    { id: 3, icon: "document-text-outline", label: "Mes rapports", color: "bg-card-yellow" },
-    { id: 4, icon: "notifications-outline", label: "Notifications", color: "bg-card-gray" },
-    { id: 5, icon: "settings-outline", label: "Paramètres", color: "bg-card-blue" },
-    { id: 6, icon: "help-circle-outline", label: "Aide & Support", color: "bg-card-green" },
+    { id: 2, icon: "checkmark-done-outline", label: "Mes vérifications", color: "bg-card-green", onPress: () => router.push("/verifications") },
+    { id: 3, icon: "stats-chart-outline", label: "Mes statistiques", color: "bg-card-gray" },
+    { id: 4, icon: "document-text-outline", label: "Mes rapports", color: "bg-card-yellow" },
+    { id: 6, icon: "settings-outline", label: "Paramètres", color: "bg-card-blue" },
+    { id: 7, icon: "help-circle-outline", label: "Aide & Support", color: "bg-card-green" },
   ];
 
   return (
@@ -82,8 +82,8 @@ export default function ProfileScreen() {
         </View>
 
         {/* Profile Card */}
-        <View className="bg-zinc-200 rounded-[24px] p-6">
-          <View className="flex-row items-center mb-4">
+        <View className="bg-zinc-200 rounded-[20px] p-6">
+          <View className="flex-row items-center">
             <View className="w-20 h-20 rounded-full bg-white justify-center items-center mr-4">
               <Ionicons name="person" size={40} color="#000" />
             </View>
@@ -99,22 +99,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-
-          {/* Stats */}
-          <View className="flex-row justify-between mt-4 pt-4 border-t-[0.3px] border-gray-700">
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-zinc-700">247</Text>
-              <Text className="text-xs text-gray-900 mt-1">Perceptions</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-zinc-700">1.2M FC</Text>
-              <Text className="text-xs text-gray-900 mt-1">Collecté</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-zinc-700">98%</Text>
-              <Text className="text-xs text-gray-900 mt-1">Précision</Text>
-            </View>
-          </View>
         </View>
       </View>
 
@@ -127,6 +111,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               key={item.id}
               className="bg-white rounded-[20px] p-4 flex-row items-center"
+              onPress={item.onPress}
             >
               <View className={`w-12 h-12 rounded-full ${item.color} justify-center items-center mr-4`}>
                 <Ionicons name={item.icon as any} size={24} color="#000" />

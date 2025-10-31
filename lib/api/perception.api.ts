@@ -728,3 +728,85 @@ export async function verifyRecuByNumero(numero: string): Promise<VerifyRecuResu
     throw new Error(error.message || "Une erreur inattendue est survenue");
   }
 }
+
+/**
+ * Interface pour les vérifications d'un agent
+ */
+export interface AgentVerification {
+  id: number;
+  recette: Perception;
+  agent: Agent;
+  poste: Poste;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Récupérer les vérifications d'un agent
+ * 
+ * @returns Promise<PaginatedResponse<AgentVerification>>
+ * 
+ * @example
+ * ```typescript
+ * const verifications = await getAgentVerifications();
+ * ```
+ */
+export async function getAgentVerifications(
+  agentId: number,
+  params?: GetPerceptionsParams
+): Promise<PaginatedResponse<AgentVerification>> {
+  try {
+    console.log("🔍 Récupération des vérifications de l'agent");
+
+    // Construire les paramètres de requête
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) {
+      queryParams.append("page", params.page.toString());
+    }
+    
+    if (params?.page_size) {
+      queryParams.append("page_size", params.page_size.toString());
+    }
+
+    const queryString = queryParams.toString();
+    const url = queryString 
+      ? `/recette-routiere/agents/${agentId}/verifications/?${queryString}`
+      : `/recette-routiere/agents/${agentId}/verifications/`;
+
+    const { data } = await api.get<PaginatedResponse<AgentVerification>>(url);
+
+
+    console.log("✅ Vérifications récupérées:", data.count);
+    return data;
+  } catch (error: any) {
+    console.error("❌ Erreur lors de la récupération des vérifications:", error);
+
+    // Gestion des erreurs
+    if (error.response) {
+      // Erreur d'authentification (401)
+      if (error.response.status === 401) {
+        throw new Error("Vous devez être connecté pour voir vos vérifications");
+      }
+
+      // Erreur serveur (500)
+      if (error.response.status >= 500) {
+        throw new Error("Erreur serveur. Veuillez réessayer plus tard.");
+      }
+
+      throw new Error(
+        error.response.data?.message || error.response.data?.detail || "Une erreur est survenue"
+      );
+    }
+
+    // Erreur réseau
+    if (error.request) {
+      throw new Error(
+        "Impossible de contacter le serveur. Vérifiez votre connexion internet."
+      );
+    }
+
+    // Autre erreur
+    throw new Error(error.message || "Une erreur inattendue est survenue");
+  }
+}
